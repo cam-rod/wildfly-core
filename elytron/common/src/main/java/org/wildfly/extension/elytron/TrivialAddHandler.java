@@ -75,7 +75,7 @@ abstract class TrivialAddHandler<T> extends BaseAddHandler {
         serviceBuilder.setInstance(trivialService);
 
         trivialService.setValueSupplier(getValueSupplier(serviceBuilder, context, resource.getModel()));
-        installedForResource(commonDependencies(serviceBuilder, dependOnProperties(), dependOnProviderRegistration())
+        installedForResource(ElytronDefinition.commonDependencies(serviceBuilder, dependOnProperties(), dependOnProviderRegistration())
                 .setInitialMode(context.getRunningMode() == RunningMode.ADMIN_ONLY ? adminOnlyInitialMode : initialMode)
                 .install(), resource);
     }

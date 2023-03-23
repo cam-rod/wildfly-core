@@ -133,7 +133,7 @@ class KeyStoreService implements ModifiableKeyStoreService {
             }
 
             if (path != null) {
-                pathResolver = pathResolver();
+                pathResolver = FileAttributeDefinitions.pathResolver();
                 resolvedPath = getResolvedPath(pathResolver, path, relativeTo);
             }
 
@@ -141,19 +141,19 @@ class KeyStoreService implements ModifiableKeyStoreService {
             if (resolvedPath != null && ! resolvedPath.exists()) {
                 if (required) {
                     if (type == null) {
-                        throw ROOT_LOGGER.nonexistingKeyStoreMissingType();
+                        throw ElytronSubsystemMessages.ROOT_LOGGER.nonexistingKeyStoreMissingType();
                     } else {
-                        throw ROOT_LOGGER.keyStoreFileNotExists(resolvedPath.getAbsolutePath());
+                        throw ElytronSubsystemMessages.ROOT_LOGGER.keyStoreFileNotExists(resolvedPath.getAbsolutePath());
                     }
                 } else {
-                    ROOT_LOGGER.keyStoreFileNotExistsButIgnored(resolvedPath.getAbsolutePath());
+                    ElytronSubsystemMessages.ROOT_LOGGER.keyStoreFileNotExistsButIgnored(resolvedPath.getAbsolutePath());
                 }
             }
 
             try (FileInputStream is = (resolvedPath != null && resolvedPath.exists()) ? new FileInputStream(resolvedPath) : null) {
                 char[] password = resolvePassword();
 
-                ROOT_LOGGER.tracef(
+                ElytronSubsystemMessages.ROOT_LOGGER.tracef(
                         "starting:  type = %s  provider = %s  path = %s  resolvedPath = %s  password = %b  aliasFilter = %s",
                         type, provider, path, resolvedPath, password != null, aliasFilter
                 );
@@ -170,7 +170,7 @@ class KeyStoreService implements ModifiableKeyStoreService {
                         KeyStore detected = KeyStoreUtil.loadKeyStore(() -> finalProviders, this.provider, is, resolvedPath.getPath(), password);
 
                         if (detected == null) {
-                            throw ROOT_LOGGER.unableToDetectKeyStore(resolvedPath.getPath());
+                            throw ElytronSubsystemMessages.ROOT_LOGGER.unableToDetectKeyStore(resolvedPath.getPath());
                         }
 
                         keyStore = AtomicLoadKeyStore.atomize(detected);
@@ -178,7 +178,7 @@ class KeyStoreService implements ModifiableKeyStoreService {
                 } else {
                     if (keyStore == null) {
                         String defaultType = KeyStore.getDefaultType();
-                        ROOT_LOGGER.debugf(
+                        ElytronSubsystemMessages.ROOT_LOGGER.debugf(
                                 "KeyStore: provider = %s  path = %s  resolvedPath = %s  password = %b  aliasFilter = %s does not exist. New keystore of %s type will be created.",
                                 provider, path, resolvedPath, password != null, aliasFilter, defaultType
                         );
@@ -197,7 +197,7 @@ class KeyStoreService implements ModifiableKeyStoreService {
             this.trackingKeyStore = ModifyTrackingKeyStore.modifyTrackingKeyStore(intermediate);
             this.unmodifiableKeyStore = UnmodifiableKeyStore.unmodifiableKeyStore(intermediate);
         } catch (Exception e) {
-            throw ROOT_LOGGER.unableToStartService(e);
+            throw ElytronSubsystemMessages.ROOT_LOGGER.unableToStartService(e);
         }
     }
 
@@ -206,7 +206,7 @@ class KeyStoreService implements ModifiableKeyStoreService {
         Supplier<Provider[]> providersSupplier = () -> candidates == null ? Security.getProviders() : candidates;
         Provider identified = findProvider(providersSupplier, provider, KeyStore.class, type);
         if (identified == null) {
-            throw ROOT_LOGGER.noSuitableProvider(type);
+            throw ElytronSubsystemMessages.ROOT_LOGGER.noSuitableProvider(type);
         }
         return identified;
     }
@@ -220,7 +220,7 @@ class KeyStoreService implements ModifiableKeyStoreService {
     }
 
     private void checkCertificatesValidity(KeyStore keyStore) throws KeyStoreException {
-        if (ROOT_LOGGER.isEnabled(Logger.Level.WARN)) {
+        if (ElytronSubsystemMessages.ROOT_LOGGER.isEnabled(Logger.Level.WARN)) {
             Enumeration<String> aliases = keyStore.aliases();
             while (aliases.hasMoreElements()) {
                 String alias = aliases.nextElement();
@@ -229,7 +229,7 @@ class KeyStoreService implements ModifiableKeyStoreService {
                     try {
                         ((X509Certificate) certificate).checkValidity();
                     } catch (CertificateExpiredException | CertificateNotYetValidException e) {
-                        ROOT_LOGGER.certificateNotValid(alias, e);
+                        ElytronSubsystemMessages.ROOT_LOGGER.certificateNotValid(alias, e);
                     }
                 }
             }
@@ -238,7 +238,7 @@ class KeyStoreService implements ModifiableKeyStoreService {
 
     @Override
     public void stop(StopContext stopContext) {
-        ROOT_LOGGER.tracef(
+        ElytronSubsystemMessages.ROOT_LOGGER.tracef(
                 "stopping:  keyStore = %s  unmodifiableKeyStore = %s  trackingKeyStore = %s  pathResolver = %s",
                 keyStore, unmodifiableKeyStore, trackingKeyStore, pathResolver
         );
@@ -286,7 +286,7 @@ class KeyStoreService implements ModifiableKeyStoreService {
 
     LoadKey load() throws OperationFailedException {
         try {
-            ROOT_LOGGER.tracef("reloading KeyStore from file [%s]", resolvedPath);
+            ElytronSubsystemMessages.ROOT_LOGGER.tracef("reloading KeyStore from file [%s]", resolvedPath);
             AtomicLoadKeyStore.LoadKey loadKey = load(keyStore);
             long originalSynced = synched;
             synched = System.currentTimeMillis();
@@ -294,12 +294,12 @@ class KeyStoreService implements ModifiableKeyStoreService {
             trackingKeyStore.setModified(false);
             return new LoadKey(loadKey, originalSynced, originalModified);
         } catch (Exception e) {
-            throw ROOT_LOGGER.unableToCompleteOperation(e, e.getLocalizedMessage());
+            throw ElytronSubsystemMessages.ROOT_LOGGER.unableToCompleteOperation(e, e.getLocalizedMessage());
         }
     }
 
     void revertLoad(final LoadKey loadKey) {
-        ROOT_LOGGER.trace("reverting load of KeyStore");
+        ElytronSubsystemMessages.ROOT_LOGGER.trace("reverting load of KeyStore");
         keyStore.revert(loadKey.loadKey);
         synched = loadKey.modifiedTime;
         trackingKeyStore.setModified(loadKey.modified);
@@ -307,15 +307,15 @@ class KeyStoreService implements ModifiableKeyStoreService {
 
     void save() throws OperationFailedException {
         if (resolvedPath == null) {
-            throw ROOT_LOGGER.cantSaveWithoutFile(path);
+            throw ElytronSubsystemMessages.ROOT_LOGGER.cantSaveWithoutFile(path);
         }
-        ROOT_LOGGER.tracef("saving KeyStore to the file [%s]", resolvedPath);
+        ElytronSubsystemMessages.ROOT_LOGGER.tracef("saving KeyStore to the file [%s]", resolvedPath);
         try (FileOutputStream fos = new FileOutputStream(resolvedPath)) {
             keyStore.store(fos, resolvePassword());
             synched = System.currentTimeMillis();
             trackingKeyStore.setModified(false);
         } catch (Exception e) {
-            throw ROOT_LOGGER.unableToCompleteOperation(e, e.getLocalizedMessage());
+            throw ElytronSubsystemMessages.ROOT_LOGGER.unableToCompleteOperation(e, e.getLocalizedMessage());
         }
     }
 
@@ -330,11 +330,11 @@ class KeyStoreService implements ModifiableKeyStoreService {
         }
         CredentialSource cs = keyPasswordCredentialSourceSupplier.get();
         String path = resolvedPath != null ? resolvedPath.getPath() : "null";
-        if (cs == null) throw ROOT_LOGGER.keyPasswordCannotBeResolved(path);
+        if (cs == null) throw ElytronSubsystemMessages.ROOT_LOGGER.keyPasswordCannotBeResolved(path);
         PasswordCredential credential = cs.getCredential(PasswordCredential.class);
-        if (credential == null) throw ROOT_LOGGER.keyPasswordCannotBeResolved(path);
+        if (credential == null) throw ElytronSubsystemMessages.ROOT_LOGGER.keyPasswordCannotBeResolved(path);
         ClearPassword password = credential.getPassword(ClearPassword.class);
-        if (password == null) throw ROOT_LOGGER.keyPasswordCannotBeResolved(path);
+        if (password == null) throw ElytronSubsystemMessages.ROOT_LOGGER.keyPasswordCannotBeResolved(path);
         return password.getPassword();
     }
 
@@ -342,11 +342,11 @@ class KeyStoreService implements ModifiableKeyStoreService {
         ExceptionSupplier<CredentialSource, Exception> sourceSupplier = credentialSourceSupplier.getValue();
         CredentialSource cs = sourceSupplier != null ? sourceSupplier.get() : null;
         String path = resolvedPath != null ? resolvedPath.getPath() : "null";
-        if (cs == null) throw ROOT_LOGGER.keyStorePasswordCannotBeResolved(path);
+        if (cs == null) throw ElytronSubsystemMessages.ROOT_LOGGER.keyStorePasswordCannotBeResolved(path);
         PasswordCredential credential = cs.getCredential(PasswordCredential.class);
-        if (credential == null) throw ROOT_LOGGER.keyStorePasswordCannotBeResolved(path);
+        if (credential == null) throw ElytronSubsystemMessages.ROOT_LOGGER.keyStorePasswordCannotBeResolved(path);
         ClearPassword password = credential.getPassword(ClearPassword.class);
-        if (password == null) throw ROOT_LOGGER.keyStorePasswordCannotBeResolved(path);
+        if (password == null) throw ElytronSubsystemMessages.ROOT_LOGGER.keyStorePasswordCannotBeResolved(path);
 
         return password.getPassword();
     }
@@ -376,11 +376,11 @@ class KeyStoreService implements ModifiableKeyStoreService {
                 X509Certificate selfSignedCertificate = selfSignedCertificateAndSigningKey.getSelfSignedCertificate();
                 keyStore.setKeyEntry(GENERATED_CERTIFICATE_ALIAS, selfSignedCertificateAndSigningKey.getSigningKey(), password == null ? resolvePassword() : password,
                         new X509Certificate[]{selfSignedCertificate});
-                ROOT_LOGGER.selfSignedCertificateHasBeenCreated(resolvedPath.getAbsolutePath(), getShaFingerprint(selfSignedCertificate, "SHA-1"), getShaFingerprint(selfSignedCertificate, "SHA-256"));
+                ElytronSubsystemMessages.ROOT_LOGGER.selfSignedCertificateHasBeenCreated(resolvedPath.getAbsolutePath(), getShaFingerprint(selfSignedCertificate, "SHA-1"), getShaFingerprint(selfSignedCertificate, "SHA-256"));
                 save();
             }
         } catch (Exception e) {
-            throw ROOT_LOGGER.failedToStoreGeneratedSelfSignedCertificate(e);
+            throw ElytronSubsystemMessages.ROOT_LOGGER.failedToStoreGeneratedSelfSignedCertificate(e);
         }
     }
 

@@ -123,14 +123,6 @@ public class ElytronExtension implements Extension {
         return new StandardResourceDescriptionResolver(sb.toString(), RESOURCE_NAME, ElytronExtension.class.getClassLoader(), true, false);
     }
 
-    /**
-     * Gets whether the given {@code resourceRegistration} is for a server, or if not,
-     * is not for a resource in the {@code profile} resource tree.
-     */
-    static boolean isServerOrHostController(ImmutableManagementResourceRegistration resourceRegistration) {
-        return resourceRegistration.getProcessType().isServer() || !ModelDescriptionConstants.PROFILE.equals(resourceRegistration.getPathAddress().getElement(0).getKey());
-    }
-
     @Override
     public void initializeParsers(ExtensionParsingContext context) {
         context.setSubsystemXmlMapping(SUBSYSTEM_NAME, NAMESPACE_1_0, () -> new ElytronSubsystemParser1_0());
@@ -168,11 +160,4 @@ public class ElytronExtension implements Extension {
 
         context.registerExpressionResolverExtension(resolverRef::get, ExpressionResolverResourceDefinition.INITIAL_PATTERN, false);
     }
-
-    @SuppressWarnings("unchecked")
-    static <T> ServiceController<T> getRequiredService(ServiceRegistry serviceRegistry, ServiceName serviceName, Class<T> serviceType) {
-        ServiceController<?> controller = serviceRegistry.getRequiredService(serviceName);
-        return (ServiceController<T>) controller;
-    }
-
 }

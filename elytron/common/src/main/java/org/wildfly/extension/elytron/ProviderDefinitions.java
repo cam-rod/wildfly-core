@@ -168,7 +168,7 @@ class ProviderDefinitions {
                         final Supplier<PathManagerService> pathManager;
                         if (properties == null && relativeTo != null) {
                             pathManager = serviceBuilder.requires(PathManagerService.SERVICE_NAME);
-                            serviceBuilder.requires(pathName(relativeTo));
+                            serviceBuilder.requires(FileAttributeDefinitions.pathName(relativeTo));
                         } else {
                             pathManager = null;
                         }
@@ -179,7 +179,7 @@ class ProviderDefinitions {
                             public Provider[] get() throws StartException {
                                 File resolved = null;
                                 if (properties == null && relativeTo != null) {
-                                    PathResolver pathResolver = pathResolver();
+                                    PathResolver pathResolver = FileAttributeDefinitions.pathResolver();
                                     pathResolver.path(path);
                                     if (relativeTo != null) {
                                         pathResolver.relativeTo(relativeTo, pathManager.get());
@@ -280,7 +280,7 @@ class ProviderDefinitions {
                                         loadedProviders.add(p);
                                     }
                                 } catch (Exception e) {
-                                    ROOT_LOGGER.tracef(e, "Failed to initialize a security provider");
+                                    ElytronSubsystemMessages.ROOT_LOGGER.tracef(e, "Failed to initialize a security provider");
                                 }
                             }
 
@@ -290,8 +290,8 @@ class ProviderDefinitions {
                             }
 
                             Provider[] providers = loadedProviders.toArray(new Provider[loadedProviders.size()]);
-                            if (ROOT_LOGGER.isTraceEnabled()) {
-                                ROOT_LOGGER.tracef("Loaded providers %s", Arrays.toString(providers));
+                            if (ElytronSubsystemMessages.ROOT_LOGGER.isTraceEnabled()) {
+                                ElytronSubsystemMessages.ROOT_LOGGER.tracef("Loaded providers %s", Arrays.toString(providers));
                             }
                             return providers;
                         } catch (PrivilegedActionException e) {
@@ -345,7 +345,7 @@ class ProviderDefinitions {
 
             return () -> new ByteArrayInputStream(configuration);
         } catch (IOException e) {
-            throw ROOT_LOGGER.unableToStartService(e);
+            throw ElytronSubsystemMessages.ROOT_LOGGER.unableToStartService(e);
         }
     }
 
@@ -357,7 +357,7 @@ class ProviderDefinitions {
 
             return () -> new ByteArrayInputStream(configuration);
         } catch (IOException e) {
-            throw ROOT_LOGGER.unableToStartService(e);
+            throw ElytronSubsystemMessages.ROOT_LOGGER.unableToStartService(e);
         }
     }
 

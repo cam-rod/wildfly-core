@@ -149,7 +149,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
         .setRuntimeOnly()
         .build();
 
-    private static final AttributeDefinition[] CONFIG_ATTRIBUTES = new AttributeDefinition[] { TYPE, PROVIDER_NAME, PROVIDERS, CREDENTIAL_REFERENCE, PATH, RELATIVE_TO, REQUIRED, ALIAS_FILTER };
+    private static final AttributeDefinition[] CONFIG_ATTRIBUTES = new AttributeDefinition[] { TYPE, PROVIDER_NAME, PROVIDERS, CREDENTIAL_REFERENCE, FileAttributeDefinitions.PATH, FileAttributeDefinitions.RELATIVE_TO, REQUIRED, ALIAS_FILTER };
 
     private static final KeyStoreAddHandler ADD = new KeyStoreAddHandler();
     private static final OperationStepHandler REMOVE = new TrivialCapabilityServiceRemoveHandler(ADD, KEY_STORE_RUNTIME_CAPABILITY);
@@ -170,7 +170,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
             resourceRegistration.registerReadWriteAttribute(current, null, WRITE);
         }
 
-        if (isServerOrHostController(resourceRegistration)) {
+        if (ElytronExtension.isServerOrHostController(resourceRegistration)) {
             resourceRegistration.registerReadOnlyAttribute(STATE, new ElytronRuntimeOnlyHandler() {
 
                 @Override
@@ -190,7 +190,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
                     try {
                         result.set(keyStoreService.getValue().size());
                     } catch (KeyStoreException e) {
-                        throw ROOT_LOGGER.unableToAccessKeyStore(e);
+                        throw ElytronSubsystemMessages.ROOT_LOGGER.unableToAccessKeyStore(e);
                     }
                 }
             });
@@ -199,7 +199,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
 
                 @Override
                 protected void performRuntime(ModelNode result, ModelNode operation, KeyStoreService keyStoreService) throws OperationFailedException {
-                    SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_FORMAT);
+                    SimpleDateFormat sdf = new SimpleDateFormat(ElytronExtension.ISO_8601_FORMAT);
                     result.set(sdf.format(new Date(keyStoreService.timeSynched())));
                 }
             });
@@ -227,7 +227,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
     public void registerOperations(ManagementResourceRegistration resourceRegistration) {
         super.registerOperations(resourceRegistration);
         resourceRegistration.registerOperationHandler(LOAD, PersistanceHandler.INSTANCE);
-        if (isServerOrHostController(resourceRegistration)) {
+        if (ElytronExtension.isServerOrHostController(resourceRegistration)) {
             resourceRegistration.registerOperationHandler(STORE, PersistanceHandler.INSTANCE);
         }
     }
@@ -250,19 +250,19 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
             String providers = PROVIDERS.resolveModelAttribute(context, model).asStringOrNull();
             String providerName = PROVIDER_NAME.resolveModelAttribute(context, model).asStringOrNull();
             String type = TYPE.resolveModelAttribute(context, model).asStringOrNull();
-            String path = PATH.resolveModelAttribute(context, model).asStringOrNull();
+            String path = FileAttributeDefinitions.PATH.resolveModelAttribute(context, model).asStringOrNull();
             String relativeTo = null;
             boolean required;
             String aliasFilter = ALIAS_FILTER.resolveModelAttribute(context, model).asStringOrNull();
 
             final KeyStoreService keyStoreService;
             if (path != null) {
-                relativeTo = RELATIVE_TO.resolveModelAttribute(context, model).asStringOrNull();
+                relativeTo = FileAttributeDefinitions.RELATIVE_TO.resolveModelAttribute(context, model).asStringOrNull();
                 required = REQUIRED.resolveModelAttribute(context, model).asBoolean();
                 keyStoreService = KeyStoreService.createFileBasedKeyStoreService(providerName, type, relativeTo, path, required, aliasFilter);
             } else {
                 if (type == null) {
-                    throw ROOT_LOGGER.filelessKeyStoreMissingType();
+                    throw ElytronSubsystemMessages.ROOT_LOGGER.filelessKeyStoreMissingType();
                 }
                 keyStoreService = KeyStoreService.createFileLessKeyStoreService(providerName, type, aliasFilter);
             }
@@ -274,7 +274,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
 
             serviceBuilder.addDependency(PathManagerService.SERVICE_NAME, PathManager.class, keyStoreService.getPathManagerInjector());
             if (relativeTo != null) {
-                serviceBuilder.requires(pathName(relativeTo));
+                serviceBuilder.requires(FileAttributeDefinitions.pathName(relativeTo));
             }
 
             if (providers != null) {
@@ -286,7 +286,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
             keyStoreService.getCredentialSourceSupplierInjector()
                     .inject(CredentialReference.getCredentialSourceSupplier(context, KeyStoreDefinition.CREDENTIAL_REFERENCE, model, serviceBuilder));
 
-            commonDependencies(serviceBuilder).install();
+            ElytronDefinition.commonDependencies(serviceBuilder).install();
         }
 
         @Override
@@ -318,11 +318,11 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
         protected void executeRuntimeStep(OperationContext context, ModelNode operation) throws OperationFailedException {
             ServiceName keyStoreName = KEY_STORE_UTIL.serviceName(operation);
 
-            ServiceController<KeyStore> serviceContainer = getRequiredService(context.getServiceRegistry(writeAccess), keyStoreName, KeyStore.class);
+            ServiceController<KeyStore> serviceContainer = ElytronExtension.getRequiredService(context.getServiceRegistry(writeAccess), keyStoreName, KeyStore.class);
             State serviceState;
             if ((serviceState = serviceContainer.getState()) != State.UP) {
                 if (serviceMustBeUp) {
-                    throw ROOT_LOGGER.requiredServiceNotUp(keyStoreName, serviceState);
+                    throw ElytronSubsystemMessages.ROOT_LOGGER.requiredServiceNotUp(keyStoreName, serviceState);
                 }
                 return;
             }
@@ -364,7 +364,7 @@ final class KeyStoreDefinition extends SimpleResourceDefinition {
                     keyStoreService.save();
                     break;
                 default:
-                    throw ROOT_LOGGER.invalidOperationName(operationName, ElytronDescriptionConstants.LOAD,
+                    throw ElytronSubsystemMessages.ROOT_LOGGER.invalidOperationName(operationName, ElytronDescriptionConstants.LOAD,
                             ElytronDescriptionConstants.STORE);
             }
 

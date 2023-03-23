@@ -108,15 +108,15 @@ public class ElytronExpressionResolver implements ExpressionResolverExtension {
                 int delimiter = expression.indexOf(':', completePrefix.length());
                 String resolver = delimiter > 0 ? expression.substring(completePrefix.length(), delimiter) : defaultResolver;
                 if (resolver == null) {
-                    throw ROOT_LOGGER.expressionResolutionWithoutResolver(fullExpression);
+                    throw ElytronSubsystemMessages.ROOT_LOGGER.expressionResolutionWithoutResolver(fullExpression);
                 }
 
                 ResolverConfiguration resolverConfiguration = resolverConfigurations.get(resolver);
                 if (resolverConfiguration == null) {
-                    throw ROOT_LOGGER.invalidResolver(fullExpression);
+                    throw ElytronSubsystemMessages.ROOT_LOGGER.invalidResolver(fullExpression);
                 }
 
-                ROOT_LOGGER.tracef("Attempting to decrypt expression '%s' using credential store '%s' and alias '%s'.",
+                ElytronSubsystemMessages.ROOT_LOGGER.tracef("Attempting to decrypt expression '%s' using credential store '%s' and alias '%s'.",
                         fullExpression, resolverConfiguration.credentialStore, resolverConfiguration.alias);
                 CredentialStore credentialStore = resolveCredentialStore(resolverConfiguration.getCredentialStore(), operationContext, serviceSupport);
                 SecretKey secretKey;
@@ -125,7 +125,7 @@ public class ElytronExpressionResolver implements ExpressionResolverExtension {
                             SecretKeyCredential.class);
                     secretKey = credential.getSecretKey();
                 } catch (CredentialStoreException e) {
-                    throw ROOT_LOGGER.unableToLoadCredential(e);
+                    throw ElytronSubsystemMessages.ROOT_LOGGER.unableToLoadCredential(e);
                 }
 
                 String token = expression.substring(expression.lastIndexOf(':') + 1);
@@ -133,7 +133,7 @@ public class ElytronExpressionResolver implements ExpressionResolverExtension {
                 try {
                     return decrypt(token, secretKey);
                 } catch (GeneralSecurityException e) {
-                    throw ROOT_LOGGER.unableToDecryptExpression(fullExpression, e);
+                    throw ElytronSubsystemMessages.ROOT_LOGGER.unableToDecryptExpression(fullExpression, e);
                 }
             }
         }
@@ -144,12 +144,12 @@ public class ElytronExpressionResolver implements ExpressionResolverExtension {
         ensureInitialised(null, context);
         String resolvedResolver = resolver != null ? resolver : defaultResolver;
         if (resolvedResolver == null) {
-            throw ROOT_LOGGER.noResolverSpecifiedAndNoDefault();
+            throw ElytronSubsystemMessages.ROOT_LOGGER.noResolverSpecifiedAndNoDefault();
         }
 
         ResolverConfiguration resolverConfiguration = resolverConfigurations.get(resolvedResolver);
         if (resolverConfiguration == null) {
-            throw ROOT_LOGGER.noResolverWithSpecifiedName(resolvedResolver);
+            throw ElytronSubsystemMessages.ROOT_LOGGER.noResolverWithSpecifiedName(resolvedResolver);
         }
 
         CredentialStore credentialStore = resolveCredentialStore(resolverConfiguration.getCredentialStore(), context, null);
@@ -157,18 +157,18 @@ public class ElytronExpressionResolver implements ExpressionResolverExtension {
         try {
             SecretKeyCredential credential = credentialStore.retrieve(resolverConfiguration.getAlias(), SecretKeyCredential.class);
             if (credential == null) {
-                throw ROOT_LOGGER.credentialDoesNotExist(resolverConfiguration.getAlias(), SecretKeyCredential.class.getSimpleName());
+                throw ElytronSubsystemMessages.ROOT_LOGGER.credentialDoesNotExist(resolverConfiguration.getAlias(), SecretKeyCredential.class.getSimpleName());
             }
             secretKey = credential.getSecretKey();
         } catch (CredentialStoreException e) {
-            throw new OperationFailedException(ROOT_LOGGER.unableToLoadCredential(e));
+            throw new OperationFailedException(ElytronSubsystemMessages.ROOT_LOGGER.unableToLoadCredential(e));
         }
 
         String cipherTextToken;
         try {
             cipherTextToken = encrypt(clearText, secretKey);
         } catch (GeneralSecurityException e) {
-            throw ROOT_LOGGER.unableToEncryptClearText(e);
+            throw ElytronSubsystemMessages.ROOT_LOGGER.unableToEncryptClearText(e);
         }
 
         String expression = resolver == null ? String.format("${%s::%s}", prefix, cipherTextToken)
@@ -208,13 +208,13 @@ public class ElytronExpressionResolver implements ExpressionResolverExtension {
                 // of the initial OFE. Don't wrap with ResolverExtensionException because that
                 // is only used if we tried to resolve an expression we know is appropriate for us,
                 // and this method is called before we know that.
-                throw ROOT_LOGGER.expressionResolverInitialisationAlreadyFailed(firstFailure);
+                throw ElytronSubsystemMessages.ROOT_LOGGER.expressionResolverInitialisationAlreadyFailed(firstFailure);
             }
 
             if (initialisingFor != null) {
                 String existingInitialisation = this.initialisingFor.get();
                 if (existingInitialisation != null) {
-                    throw ROOT_LOGGER.cycleDetectedInitialisingExpressionResolver(existingInitialisation,
+                    throw ElytronSubsystemMessages.ROOT_LOGGER.cycleDetectedInitialisingExpressionResolver(existingInitialisation,
                             existingInitialisation);
                 }
             }
@@ -272,7 +272,7 @@ public class ElytronExpressionResolver implements ExpressionResolverExtension {
                 } catch (IllegalStateException re) {
                     if (operationContext.getCurrentStage() == OperationContext.Stage.MODEL) {
                         // Assume ISE is because capability lookups are not allowed in Stage.MODEL
-                        throw ROOT_LOGGER.modelStageResolutionNotSupported(re);
+                        throw ElytronSubsystemMessages.ROOT_LOGGER.modelStageResolutionNotSupported(re);
                     } else {
                         throw re;
                     }
@@ -291,10 +291,10 @@ public class ElytronExpressionResolver implements ExpressionResolverExtension {
             // so exception handlers know the expression was relevant to us
             if (e instanceof OperationClientException) {
                 // Use ExpressionResolutionUserException to wrap user failures
-                toThrow = ROOT_LOGGER.unableToInitializeCredentialStore(credentialStore, e.getLocalizedMessage(), e);
+                toThrow = ElytronSubsystemMessages.ROOT_LOGGER.unableToInitializeCredentialStore(credentialStore, e.getLocalizedMessage(), e);
             } else {
                 // Use ExpressionResolutionServerException to wrap other failures
-                toThrow = ROOT_LOGGER.unableToResolveCredentialStore(credentialStore, e.getLocalizedMessage(), e);
+                toThrow = ElytronSubsystemMessages.ROOT_LOGGER.unableToResolveCredentialStore(credentialStore, e.getLocalizedMessage(), e);
             }
         }
 

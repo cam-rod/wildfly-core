@@ -118,7 +118,7 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
     // Resource Resolver
     private static final StandardResourceDescriptionResolver RESOURCE_RESOLVER = ElytronExtension.getResourceDescriptionResolver(ElytronDescriptionConstants.SECRET_KEY_CREDENTIAL_STORE);
 
-    static final AttributeDefinition[] CONFIG_ATTRIBUTES = new AttributeDefinition[] { RELATIVE_TO, PATH, CREATE, POPULATE, KEY_SIZE, DEFAULT_ALIAS };
+    static final AttributeDefinition[] CONFIG_ATTRIBUTES = new AttributeDefinition[] { FileAttributeDefinitions.RELATIVE_TO, PATH, CREATE, POPULATE, KEY_SIZE, DEFAULT_ALIAS };
 
     private static final AbstractAddStepHandler ADD = new SecretKeyCredentialStoreAddHandler();
     private static final OperationStepHandler REMOVE = new TrivialCapabilityServiceRemoveHandler(ADD, CREDENTIAL_STORE_RUNTIME_CAPABILITY);
@@ -161,7 +161,7 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
     public void registerOperations(ManagementResourceRegistration resourceRegistration) {
         super.registerOperations(resourceRegistration); // Always needed to register add / remove.
 
-        boolean isServerOrHostController = isServerOrHostController(resourceRegistration);
+        boolean isServerOrHostController = ElytronExtension.isServerOrHostController(resourceRegistration);
         Map<String, CredentialStoreRuntimeOperation> operationMethods = new HashMap<>();
 
         operationMethods.put(ElytronDescriptionConstants.READ_ALIASES, this::readAliasesOperation);
@@ -234,7 +234,7 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
 
         @Override
         protected void resolveRuntime(ModelNode model, OperationContext context) throws OperationFailedException {
-            relativeTo = RELATIVE_TO.resolveModelAttribute(context, model).asStringOrNull();
+            relativeTo = FileAttributeDefinitions.RELATIVE_TO.resolveModelAttribute(context, model).asStringOrNull();
             path = PATH.resolveModelAttribute(context, model).asString();
             create = CREATE.resolveModelAttribute(context, model).asBoolean();
             populate = POPULATE.resolveModelAttribute(context, model).asBoolean();
@@ -249,7 +249,7 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
             final Supplier<PathManagerService> pathManager;
             if (relativeTo != null) {
                 pathManager = serviceBuilder.requires(PathManagerService.SERVICE_NAME);
-                serviceBuilder.requires(pathName(relativeTo));
+                serviceBuilder.requires(FileAttributeDefinitions.pathName(relativeTo));
             } else {
                 pathManager = null;
             }
@@ -259,7 +259,7 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
                 @Override
                 public CredentialStore get() throws StartException {
                     try {
-                        PathResolver pathResolver = pathResolver();
+                        PathResolver pathResolver = FileAttributeDefinitions.pathResolver();
                         pathResolver.path(path);
                         if (relativeTo != null) {
                             pathResolver.relativeTo(relativeTo, pathManager.get());
@@ -269,7 +269,7 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
 
                         return createCredentialStore(resolved);
                     } catch (GeneralSecurityException e) {
-                        throw ROOT_LOGGER.unableToStartService(e);
+                        throw ElytronSubsystemMessages.ROOT_LOGGER.unableToStartService(e);
                     }
                 }
             };
@@ -280,7 +280,7 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
             try {
                 return createCredentialStore(resolveRelativeToImmediately(path, relativeTo, foreignContext));
             } catch (GeneralSecurityException e) {
-                throw ROOT_LOGGER.unableToCreateCredentialStoreImmediately(e);
+                throw ElytronSubsystemMessages.ROOT_LOGGER.unableToCreateCredentialStoreImmediately(e);
             }
         }
 

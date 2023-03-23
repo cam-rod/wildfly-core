@@ -16,9 +16,10 @@
 
 package org.wildfly.extension.elytron;
 
+import static org.wildfly.extension.elytron.AbstractElytronExtension.ELYTRON_SUBSYSTEM_NAME;
 import static org.wildfly.extension.elytron.Capabilities.CREDENTIAL_STORE_API_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.CREDENTIAL_STORE_RUNTIME_CAPABILITY;
-import static org.wildfly.extension.elytron.ElytronExtension.isServerOrHostController;
+import static org.wildfly.extension.elytron.AbstractElytronExtension.isServerOrHostController;
 import static org.wildfly.extension.elytron.ServiceStateDefinition.STATE;
 import static org.wildfly.extension.elytron.ServiceStateDefinition.populateResponse;
 import static org.wildfly.extension.elytron._private.ElytronSubsystemMessages.ROOT_LOGGER;
@@ -73,19 +74,26 @@ import org.wildfly.security.password.spec.ClearPasswordSpec;
  */
 abstract class AbstractCredentialStoreResourceDefinition extends SimpleResourceDefinition {
 
+    /* TODO if I need this in multiple files, how many files can I actually remove the need to duplicate? Is there a way to centralize this?
+     * An alternative is some separate class that gets instantiated a lot. To actually reduce the number of calls needed, I'd have to pass the class or the method object up into `common`, otherwise they would just instantiate an abstract class :/
+     * Worst case: If this class is needed, it has to be bound to something like the AbstractExtension, or made clear that it has to be implemented. */
+    abstract <T> Class<T> getExtensionClass();
+
     static final ServiceUtil<CredentialStore> CREDENTIAL_STORE_UTIL = ServiceUtil.newInstance(CREDENTIAL_STORE_RUNTIME_CAPABILITY, ElytronDescriptionConstants.CREDENTIAL_STORE, CredentialStore.class);
 
     protected ServiceUtil<CredentialStore> getCredentialStoreUtil() {
         return CREDENTIAL_STORE_UTIL;
     }
 
-    // Operations
+    final StandardResourceDescriptionResolver OPERATION_RESOLVER = AbstractElytronExtension.getResourceDescriptionResolver(
+            ELYTRON_SUBSYSTEM_NAME, getExtensionClass(), ElytronDescriptionConstants.CREDENTIAL_STORE,
+            ElytronDescriptionConstants.OPERATIONS);
 
-    static final StandardResourceDescriptionResolver OPERATION_RESOLVER = ElytronExtension
-            .getResourceDescriptionResolver(ElytronDescriptionConstants.CREDENTIAL_STORE,
-                    ElytronDescriptionConstants.OPERATIONS);
+//    static final StandardResourceDescriptionResolver OPERATION_RESOLVER = ElytronExtension
+//            .getResourceDescriptionResolver(ElytronDescriptionConstants.CREDENTIAL_STORE,
+//                    ElytronDescriptionConstants.OPERATIONS);
 
-    static final SimpleOperationDefinition READ_ALIASES = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.READ_ALIASES, OPERATION_RESOLVER)
+    final SimpleOperationDefinition READ_ALIASES = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.READ_ALIASES, OPERATION_RESOLVER)
             .setRuntimeOnly()
             .setReadOnly()
             .build();
@@ -98,17 +106,17 @@ abstract class AbstractCredentialStoreResourceDefinition extends SimpleResourceD
             .setMinSize(1)
             .build();
 
-    static final SimpleOperationDefinition EXPORT_SECRET_KEY = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.EXPORT_SECRET_KEY, OPERATION_RESOLVER)
+    final SimpleOperationDefinition EXPORT_SECRET_KEY = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.EXPORT_SECRET_KEY, OPERATION_RESOLVER)
             .setParameters(ALIAS)
             .setRuntimeOnly()
             .build();
 
-    static final SimpleOperationDefinition IMPORT_SECRET_KEY = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.IMPORT_SECRET_KEY, OPERATION_RESOLVER)
+    final SimpleOperationDefinition IMPORT_SECRET_KEY = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.IMPORT_SECRET_KEY, OPERATION_RESOLVER)
             .setParameters(ALIAS, KEY)
             .setRuntimeOnly()
             .build();
 
-    static final SimpleOperationDefinition RELOAD = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.RELOAD, OPERATION_RESOLVER)
+    final SimpleOperationDefinition RELOAD = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.RELOAD, OPERATION_RESOLVER)
             .setRuntimeOnly()
             .build();
 

@@ -77,7 +77,7 @@ final class ServiceUtil<T> {
         }
 
         if (name == null) {
-            throw ROOT_LOGGER.operationAddressMissingKey(key);
+            throw ElytronSubsystemMessages.ROOT_LOGGER.operationAddressMissingKey(key);
         }
 
         return serviceName(name);

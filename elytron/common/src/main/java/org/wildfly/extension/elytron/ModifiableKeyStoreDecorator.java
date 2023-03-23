@@ -78,7 +78,7 @@ class ModifiableKeyStoreDecorator extends DelegatingResourceDefinition {
         ReadAliasesHandler.register(resourceRegistration, resolver);
         ReadAliasHandler.register(resourceRegistration, resolver);
 
-        if (isServerOrHostController(resourceRegistration)) { // server-only operations
+        if (ElytronExtension.isServerOrHostController(resourceRegistration)) { // server-only operations
             RemoveAliasHandler.register(resourceRegistration, resolver);
         }
     }
@@ -182,7 +182,7 @@ class ModifiableKeyStoreDecorator extends DelegatingResourceDefinition {
         private static void readAlias(final KeyStore keyStore, final String alias, final boolean verbose,
                 final ModelNode result) throws KeyStoreException, NoSuchAlgorithmException, CertificateEncodingException {
             if (!keyStore.containsAlias(alias)) {
-                ROOT_LOGGER.tracef("Alias [%s] does not exists in KeyStore");
+                ElytronSubsystemMessages.ROOT_LOGGER.tracef("Alias [%s] does not exists in KeyStore");
                 return;
             }
 
@@ -191,7 +191,7 @@ class ModifiableKeyStoreDecorator extends DelegatingResourceDefinition {
 
             Date creationDate = keyStore.getCreationDate(alias);
             if (creationDate != null) {
-                SimpleDateFormat sdf = new SimpleDateFormat(ISO_8601_FORMAT);
+                SimpleDateFormat sdf = new SimpleDateFormat(ElytronExtension.ISO_8601_FORMAT);
                 result.get(ElytronDescriptionConstants.CREATION_DATE).set(sdf.format(creationDate));
             }
 
@@ -246,7 +246,7 @@ class ModifiableKeyStoreDecorator extends DelegatingResourceDefinition {
         PathAddress currentAddress = context.getCurrentAddress();
         RuntimeCapability<Void> runtimeCapability = KEY_STORE_RUNTIME_CAPABILITY.fromBaseCapability(currentAddress.getLastElement().getValue());
         ServiceName serviceName = runtimeCapability.getCapabilityServiceName();
-        ServiceController<KeyStore> serviceController = getRequiredService(serviceRegistry, serviceName, KeyStore.class);
+        ServiceController<KeyStore> serviceController = ElytronExtension.getRequiredService(serviceRegistry, serviceName, KeyStore.class);
 
         return Assert.assertNotNull(serviceController.getValue());
     }
@@ -275,10 +275,10 @@ class ModifiableKeyStoreDecorator extends DelegatingResourceDefinition {
         RuntimeCapability<Void> runtimeCapability = KEY_STORE_RUNTIME_CAPABILITY.fromBaseCapability(currentAddress.getLastElement().getValue());
         ServiceName serviceName = runtimeCapability.getCapabilityServiceName();
 
-        ServiceController<KeyStore> serviceContainer = getRequiredService(serviceRegistry, serviceName, KeyStore.class);
+        ServiceController<KeyStore> serviceContainer = ElytronExtension.getRequiredService(serviceRegistry, serviceName, KeyStore.class);
         ServiceController.State serviceState = serviceContainer.getState();
         if (serviceState != ServiceController.State.UP) {
-            throw ROOT_LOGGER.requiredServiceNotUp(serviceName, serviceState);
+            throw ElytronSubsystemMessages.ROOT_LOGGER.requiredServiceNotUp(serviceName, serviceState);
         }
 
         return (ModifiableKeyStoreService) serviceContainer.getService();
