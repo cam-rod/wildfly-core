@@ -25,19 +25,19 @@ import org.jboss.msc.service.ServiceRegistry;
 
 public abstract class AbstractElytronExtension implements Extension {
 
-    protected static final String ELYTRON_SUBSYSTEM_NAME = "elytron";
-
-    protected static <T> String getResourceName(Class<T> extensionClass) {
+    protected static <E> String getResourceName(Class<E> extensionClass) {
         return extensionClass.getPackage().getName() + ".LocalDescriptions";
     }
 
     /**
      *
-     * @param subsystemName Name of the subsystem the resource should be registered to. Most common resources will use "elytron".
+     * @param subsystemName Name of the subsystem the resource should be registered to. Common resources will use {@value AbstractElytronDefinition#ELYTRON_SUBSYSTEM_NAME}.
      * @param extensionClass Class loader for the resource. This usually matches the current subsystem.
      * @return A resolver for the resource description
+     * @param <E> A server {@link Extension} sharing common components with Elytron.
      */
-    static <T> StandardResourceDescriptionResolver getResourceDescriptionResolver(final String subsystemName, final Class<T> extensionClass, final String... keyPrefixes) {
+    static <E extends AbstractElytronExtension> StandardResourceDescriptionResolver getResourceDescriptionResolver(final String subsystemName,
+                                                                                                                   final Class<E> extensionClass, final String... keyPrefixes) {
         StringBuilder sb = new StringBuilder(subsystemName);
         if (keyPrefixes != null) {
             for (String current : keyPrefixes) {

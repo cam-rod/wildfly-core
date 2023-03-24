@@ -16,9 +16,9 @@
 
 package org.wildfly.extension.elytron;
 
+import static org.wildfly.extension.elytron.AbstractElytronExtension.isServerOrHostController;
 import static org.wildfly.extension.elytron.Capabilities.CREDENTIAL_STORE_API_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.CREDENTIAL_STORE_RUNTIME_CAPABILITY;
-import static org.wildfly.extension.elytron.ElytronExtension.isServerOrHostController;
 import static org.wildfly.extension.elytron.FileAttributeDefinitions.RELATIVE_TO;
 import static org.wildfly.extension.elytron.FileAttributeDefinitions.pathName;
 import static org.wildfly.extension.elytron.FileAttributeDefinitions.pathResolver;
@@ -45,7 +45,6 @@ import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
 import org.jboss.as.controller.SimpleOperationDefinition;
 import org.jboss.as.controller.SimpleOperationDefinitionBuilder;
-import org.jboss.as.controller.descriptions.StandardResourceDescriptionResolver;
 import org.jboss.as.controller.operations.validation.IntAllowedValuesValidator;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.as.controller.registry.OperationEntry;
@@ -69,6 +68,13 @@ import org.wildfly.security.credential.store.CredentialStore;
  * @author <a href="mailto:darran.lofthouse@jboss.com">Darran Lofthouse</a>
  */
 class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResourceDefinition {
+
+    private final Class<? extends AbstractElytronExtension> extensionClass;
+
+    @Override
+    protected Class<? extends AbstractElytronExtension> getExtensionClass() {
+        return extensionClass;
+    }
 
     private static final String CREDENTIAL_STORE_TYPE = "PropertiesCredentialStore";
 
@@ -115,9 +121,6 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
             .setRestartAllServices()
             .build();
 
-    // Resource Resolver
-    private static final StandardResourceDescriptionResolver RESOURCE_RESOLVER = ElytronExtension.getResourceDescriptionResolver(ElytronDescriptionConstants.SECRET_KEY_CREDENTIAL_STORE);
-
     static final AttributeDefinition[] CONFIG_ATTRIBUTES = new AttributeDefinition[] { FileAttributeDefinitions.RELATIVE_TO, PATH, CREATE, POPULATE, KEY_SIZE, DEFAULT_ALIAS };
 
     private static final AbstractAddStepHandler ADD = new SecretKeyCredentialStoreAddHandler();
@@ -125,7 +128,7 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
 
     // Operation Definitions and Parameters
 
-    private static final SimpleOperationDefinition REMOVE_ALIAS = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.REMOVE_ALIAS, OPERATION_RESOLVER)
+    private final SimpleOperationDefinition removeAliasOperation = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.REMOVE_ALIAS, operationResolver)
             .setParameters(ALIAS)
             .setRuntimeOnly()
             .build();
@@ -136,19 +139,22 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
             .setRestartAllServices()
             .build();
 
-    private static final SimpleOperationDefinition GENERATE_SECRET_KEY = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.GENERATE_SECRET_KEY, OPERATION_RESOLVER)
+    private final SimpleOperationDefinition generateSecretKeyOperation = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.GENERATE_SECRET_KEY, operationResolver)
             .setParameters(ALIAS, KEY_SIZE_PARAMETER)
             .setRuntimeOnly()
             .build();
 
-    SecretKeyCredentialStoreDefinition() {
-        super(new Parameters(PathElement.pathElement(ElytronDescriptionConstants.SECRET_KEY_CREDENTIAL_STORE), RESOURCE_RESOLVER)
-                .setAddHandler(ADD)
-                .setRemoveHandler(REMOVE)
-                .setAddRestartLevel(OperationEntry.Flag.RESTART_NONE)
-                .setRemoveRestartLevel(OperationEntry.Flag.RESTART_NONE)
-                .setCapabilities(CREDENTIAL_STORE_RUNTIME_CAPABILITY)
+    <E extends AbstractElytronExtension> SecretKeyCredentialStoreDefinition(final Class<E> extensionClass) {
+        super(new Parameters(PathElement.pathElement(ElytronDescriptionConstants.SECRET_KEY_CREDENTIAL_STORE), placeholderResolver)
+                        .setAddHandler(ADD)
+                        .setRemoveHandler(REMOVE)
+                        .setAddRestartLevel(OperationEntry.Flag.RESTART_NONE)
+                        .setRemoveRestartLevel(OperationEntry.Flag.RESTART_NONE)
+                        .setCapabilities(CREDENTIAL_STORE_RUNTIME_CAPABILITY),
+                extensionClass,
+                ElytronDescriptionConstants.SECRET_KEY_CREDENTIAL_STORE
         );
+        this.extensionClass = extensionClass;
     }
 
     @Override
@@ -161,7 +167,7 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
     public void registerOperations(ManagementResourceRegistration resourceRegistration) {
         super.registerOperations(resourceRegistration); // Always needed to register add / remove.
 
-        boolean isServerOrHostController = ElytronExtension.isServerOrHostController(resourceRegistration);
+        boolean isServerOrHostController = isServerOrHostController(resourceRegistration);
         Map<String, CredentialStoreRuntimeOperation> operationMethods = new HashMap<>();
 
         operationMethods.put(ElytronDescriptionConstants.READ_ALIASES, this::readAliasesOperation);
@@ -175,9 +181,9 @@ class SecretKeyCredentialStoreDefinition extends AbstractCredentialStoreResource
         OperationStepHandler operationHandler = new CredentialStoreRuntimeHandler(operationMethods);
         resourceRegistration.registerOperationHandler(READ_ALIASES, operationHandler);
         if (isServerOrHostController) {
-            resourceRegistration.registerOperationHandler(REMOVE_ALIAS, operationHandler);
+            resourceRegistration.registerOperationHandler(removeAliasOperation, operationHandler);
             resourceRegistration.registerOperationHandler(EXPORT_SECRET_KEY, operationHandler);
-            resourceRegistration.registerOperationHandler(GENERATE_SECRET_KEY, operationHandler);
+            resourceRegistration.registerOperationHandler(generateSecretKeyOperation, operationHandler);
             resourceRegistration.registerOperationHandler(IMPORT_SECRET_KEY, operationHandler);
             resourceRegistration.registerOperationHandler(RELOAD, RELOAD_HANDLER);
         }
