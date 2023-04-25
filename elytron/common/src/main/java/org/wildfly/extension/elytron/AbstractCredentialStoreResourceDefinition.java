@@ -16,7 +16,7 @@
 
 package org.wildfly.extension.elytron;
 
-import static org.wildfly.extension.elytron.AbstractElytronDefinition.ELYTRON_SUBSYSTEM_NAME;
+import static org.wildfly.extension.elytron.AbstractElytronExtension.ELYTRON_SUBSYSTEM_NAME;
 import static org.wildfly.extension.elytron.Capabilities.CREDENTIAL_STORE_API_CAPABILITY;
 import static org.wildfly.extension.elytron.Capabilities.CREDENTIAL_STORE_RUNTIME_CAPABILITY;
 import static org.wildfly.extension.elytron.AbstractElytronExtension.isServerOrHostController;
@@ -40,7 +40,6 @@ import javax.crypto.SecretKey;
 
 import org.jboss.as.controller.AbstractWriteAttributeHandler;
 import org.jboss.as.controller.AttributeDefinition;
-import org.jboss.as.controller.Extension;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.OperationStepHandler;
@@ -51,7 +50,6 @@ import org.jboss.as.controller.SimpleOperationDefinition;
 import org.jboss.as.controller.SimpleOperationDefinitionBuilder;
 import org.jboss.as.controller.SimpleResourceDefinition;
 import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
-import org.jboss.as.controller.descriptions.ResourceDescriptionResolver;
 import org.jboss.as.controller.descriptions.StandardResourceDescriptionResolver;
 import org.jboss.as.controller.registry.ManagementResourceRegistration;
 import org.jboss.dmr.ModelNode;
@@ -79,8 +77,7 @@ abstract class AbstractCredentialStoreResourceDefinition extends SimpleResourceD
     /* TODO if I need this in multiple files, how many files can I actually remove the need to duplicate? Is there a way to centralize this?
      * An alternative is some separate class that gets instantiated a lot. To actually reduce the number of calls needed, I'd have to pass the class or the method object up into `common`, otherwise they would just instantiate an abstract class :/
      * Worst case: If this class is needed, it has to be bound to something like the AbstractExtension, or made clear that it has to be implemented. */
-    protected abstract Class<? extends AbstractElytronExtension> getExtensionClass();
-    protected static final StandardResourceDescriptionResolver placeholderResolver = AbstractElytronExtension.getResourceDescriptionResolver(ELYTRON_SUBSYSTEM_NAME, AbstractElytronExtension.class, "placeholder");
+    abstract <T> Class<T> getExtensionClass();
 
     static final ServiceUtil<CredentialStore> CREDENTIAL_STORE_UTIL = ServiceUtil.newInstance(CREDENTIAL_STORE_RUNTIME_CAPABILITY, ElytronDescriptionConstants.CREDENTIAL_STORE, CredentialStore.class);
 
@@ -88,7 +85,7 @@ abstract class AbstractCredentialStoreResourceDefinition extends SimpleResourceD
         return CREDENTIAL_STORE_UTIL;
     }
 
-    final StandardResourceDescriptionResolver operationResolver = AbstractElytronExtension.getResourceDescriptionResolver(
+    final StandardResourceDescriptionResolver OPERATION_RESOLVER = AbstractElytronExtension.getResourceDescriptionResolver(
             ELYTRON_SUBSYSTEM_NAME, getExtensionClass(), ElytronDescriptionConstants.CREDENTIAL_STORE,
             ElytronDescriptionConstants.OPERATIONS);
 
@@ -96,7 +93,7 @@ abstract class AbstractCredentialStoreResourceDefinition extends SimpleResourceD
 //            .getResourceDescriptionResolver(ElytronDescriptionConstants.CREDENTIAL_STORE,
 //                    ElytronDescriptionConstants.OPERATIONS);
 
-    final SimpleOperationDefinition READ_ALIASES = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.READ_ALIASES, operationResolver)
+    final SimpleOperationDefinition READ_ALIASES = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.READ_ALIASES, OPERATION_RESOLVER)
             .setRuntimeOnly()
             .setReadOnly()
             .build();
@@ -109,35 +106,24 @@ abstract class AbstractCredentialStoreResourceDefinition extends SimpleResourceD
             .setMinSize(1)
             .build();
 
-    final SimpleOperationDefinition EXPORT_SECRET_KEY = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.EXPORT_SECRET_KEY, operationResolver)
+    final SimpleOperationDefinition EXPORT_SECRET_KEY = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.EXPORT_SECRET_KEY, OPERATION_RESOLVER)
             .setParameters(ALIAS)
             .setRuntimeOnly()
             .build();
 
-    final SimpleOperationDefinition IMPORT_SECRET_KEY = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.IMPORT_SECRET_KEY, operationResolver)
+    final SimpleOperationDefinition IMPORT_SECRET_KEY = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.IMPORT_SECRET_KEY, OPERATION_RESOLVER)
             .setParameters(ALIAS, KEY)
             .setRuntimeOnly()
             .build();
 
-    final SimpleOperationDefinition RELOAD = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.RELOAD, operationResolver)
+    final SimpleOperationDefinition RELOAD = new SimpleOperationDefinitionBuilder(ElytronDescriptionConstants.RELOAD, OPERATION_RESOLVER)
             .setRuntimeOnly()
             .build();
 
     static final OperationStepHandler RELOAD_HANDLER = new CredentialStoreReloadHandler();
 
-
-    /**
-     *
-     * @param parameters Parameters for the subsystem, except the {@link StandardResourceDescriptionResolver}.
-     * @param keyPrefixes Prefixes for the resource resolver
-     * @param extensionClass Class loader for the resource. This usually matches the current subsystem.
-     * @param <E> A server {@link Extension} sharing common components with Elytron.
-     */
-    protected <E extends AbstractElytronExtension> AbstractCredentialStoreResourceDefinition(Parameters parameters,
-                                                                     Class<E> extensionClass, String... keyPrefixes) {
-        super(parameters.setDescriptionResolver(
-                AbstractElytronExtension.getResourceDescriptionResolver(ELYTRON_SUBSYSTEM_NAME, extensionClass, keyPrefixes)
-        ));
+    protected AbstractCredentialStoreResourceDefinition(Parameters parameters) {
+        super(parameters);
     }
 
     @Override
